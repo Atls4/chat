@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Main page</title>
+</head>
+<body>
+    <form action="">
+        <button id="logout">Logout</button>
+    </form>
+    <button id='send'>Click</button>
+    <script>
+        document.getElementById('logout').addEventListener('click', () => {
+            console.log('Delete ze cookies');
+            deleteCookies();
+            
+        });
+        function deleteCookies(){
+            let cookies = document.cookie.split(";");
+
+            cookies.forEach(cookie => {
+                let currentCookie = cookie;
+                let eqPos = currentCookie.indexOf("=");
+                let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                
+            });
+        }
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        $(()=>{
+            const socket = io();
+            $('#send').on('click', ()=>{
+                socket.emit('click', 'I clicked');
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>
