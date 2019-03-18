@@ -1,5 +1,6 @@
 /*:TODO: 
 Login email doesnt do anything
+Fix COMMANDS
 */
 //DEPENDENCIES
 const express = require('express');
@@ -188,27 +189,55 @@ function chatApp(){
                 username: String,
                 text : String,
                 color: message.color || 'grey',
-                role: undefined
+                role: undefined,
+                type: 'standard'
             };
 
+            jwt.verify(message.token, config.secret, (err, decoded)=>{
+                //IF TOKEN IS WRONG
+                if(err){
+                    console.log(chalk.red('Bad token'), err);
 
-            //VERIFY TEXT
-            verifyText(message.text, ()=>{
-                //VERIFY TOKEN        
-                jwt.verify(message.token, config.secret, (err, decoded)=>{
-                    if(err){
-                        console.log(err);
-                    } else if (decoded.username){
-                        sendMessage.username = decoded.username || 'Error_Username_Not_Found';
-                        sendMessage.text = message.text;
-                        //SEND MESSAGE TO EVERYONE
-                        io.emit('get_message', sendMessage); //io.emit socket.emit
-                        console.log(chalk.blue('Message sent\n'));
+                    let errorMessage = {
+                        username: null,
+                        text: 'Wrong token',
+                        color: 'red',
+                        role: null,
+                        type: 'error'
+                    };
+                    socket.emit('get_message', errorMessage)
+                //IF TOKEN IS GOOD
+                } else if (decoded.username){
+                    
+                    //VERIFY IF TEXT IS CORRECT
+                    verifyText(message.text, ()=>{
+                        //CHECK IF TEXT IS COMMAND
+                        if(message.text.startsWith('/')){
 
-                    }
-                });
-            });
+                            console.log(chalk.yellow(`Command received: [${message.text}]`));
+                            let commandMessage = {
+                                username: 'System',
+                                text: String,
+                                color: 'grey',
+                                role: null,
+                                type: 'command'
+                            }
 
+                            commandMessage.text = "Commands currently don't work"
+                            socket.emit('get_message', commandMessage);
+                            console.log(chalk.blue('Message sent to sender\n'));
+                        } else {
+
+                            sendMessage.username = decoded.username || 'Error_Username_Not_Found';
+                            sendMessage.text = message.text;
+                            //SEND MESSAGE TO EVERYONE
+                            io.emit('get_message', sendMessage); //io.emit socket.emit
+                            console.log(chalk.blue('Message sent to everyone\n'));
+                        }
+                    });
+
+                }
+            });            
             
         });
         //DISCONNECT
@@ -219,13 +248,21 @@ function chatApp(){
     });
 }
 //-----------------------------------------------------------------------
-function verifyText(text,callback){
+function verifyRole(role,callback){
+    switch(role){
+        case 'user': 
+        break;
+    }
+}
+//-----------------------------------------------------------------------
+function verifyText(text, callback){
     if(text){
         let trimmed = text.trim();
         if(trimmed && trimmed !== ""){
             if(true){
 
                 console.log(chalk.green(`Text verified: [${text}]`));
+                
                 callback();
             } else {
                 //FILTERED ERROR MSG COMES HERE

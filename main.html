@@ -13,6 +13,7 @@
     <input id="chatField" type="text">
     <button id='chatSend'>Click</button>
     <ul id="messages"></ul>
+    <h4 id="placeholder">Placeholder</h3>
 
     <!--JQUERY-->
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
@@ -70,10 +71,26 @@
             //RECEIVE MESSAGE
             socket.on('get_message', function(message){
                 console.log('A message has been received');
-                
-                //APPEND MESSAGE TO DOC
-                $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
-                    /*ADD COLOR AND BADGES IN FUTURE [REACT]*/
+                switch(message.type){
+                    case "standard": {
+                        //APPEND MESSAGE TO DOC
+                        $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
+                        /*ADD COLOR AND BADGES IN FUTURE [REACT]*/
+                    }
+                    break;
+                    case "command": {
+                        $('#placeholder').text('Command' + message.type + " : " + message.text); 
+                    }
+                    break;
+                    case "error": {
+                        $('#placeholder').text('Error' + message.type + " : " + message.text); 
+                    }
+                    break;
+                    default: {
+                        $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
+                    }
+                    break;
+                }
             });
         });
     </script>
