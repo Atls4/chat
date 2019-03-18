@@ -1,3 +1,6 @@
+/*:TODO: 
+Login email doesnt do anything
+*/
 //DEPENDENCIES
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -17,6 +20,7 @@ const middleware = require('./middleware');
 const models = require('./models');
 let User = models.User;
 
+//------------------------------------------------------------------
 class HandlerGenerator {
     registerPage (req,res) {
         res.sendFile('register.html', {root: __dirname}, (err) => {
@@ -171,6 +175,71 @@ function validateLogin(model, data, callback){
 
 
 //------------------------------------------------------------
+function chatApp(){
+
+    io.on('connection', (socket) =>{    //USER CONNECTED
+        console.log(chalk.green('A user has connected!'));
+
+        //USER SENT SOMETHING
+        socket.on('send_message', (message)=>{
+            console.log(chalk.blue(`Message received (${message.color})`));
+
+            let sendMessage = {
+                username: String,
+                text : String,
+                color: message.color || 'grey',
+                role: undefined
+            };
+
+
+            //VERIFY TEXT
+            verifyText(message.text, ()=>{
+                //VERIFY TOKEN        
+                jwt.verify(message.token, config.secret, (err, decoded)=>{
+                    if(err){
+                        console.log(err);
+                    } else if (decoded.username){
+                        sendMessage.username = decoded.username || 'Error_Username_Not_Found';
+                        sendMessage.text = message.text;
+                        //SEND MESSAGE TO EVERYONE
+                        io.emit('get_message', sendMessage); //io.emit socket.emit
+                        console.log(chalk.blue('Message sent\n'));
+
+                    }
+                });
+            });
+
+            
+        });
+        //DISCONNECT
+        socket.on('disconnect', ()=>{        
+            console.log(chalk.bgRed('A user has dissconnected'));
+
+        });
+    });
+}
+//-----------------------------------------------------------------------
+function verifyText(text,callback){
+    if(text){
+        let trimmed = text.trim();
+        if(trimmed && trimmed !== ""){
+            if(true){
+
+                console.log(chalk.green(`Text verified: [${text}]`));
+                callback();
+            } else {
+                //FILTERED ERROR MSG COMES HERE
+            }
+        } else {
+            console.log(chalk.red(`EMPTY TEXT: [${text}]`));
+        }   
+    } else {
+        console.log(chalk.red(`UNDEFINED TEXT: [${text}]`));
+        
+    }
+}
+//------------------------------------------------------------------------
+
 function main(){
 
     mongoose.connect('mongodb://localhost:27017/ConnectionTesting',{ useNewUrlParser: true });
@@ -198,94 +267,18 @@ function main(){
 
 
     app.on('ready', () => { //Wait for mongoose to connect to db
-        io.on('connection', (socket) =>{
-            console.log(chalk.green('A user has connected!'));
-            socket.on('click', (msg)=>{
-                console.log('From client: ' + msg);
-                
-            });
-            socket.on('disconnect', ()=>{
-                console.log(chalk.bgRed('A user has dissconnected'));
-                
-            });
-        });
 
-        http.listen(config.port, () => {
+        chatApp(); //Start chat app
+        http.listen(config.port, () => { //Start server
             console.log(`Server is listening on port: ${config.port}`);
             
         });
     });
 
 }
+//--------------------------------------------------------------
 
-main();
+main(); //Start app here
 
-/*
-//APP STARTS HERE
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-//LOGIN
-app.get('/test', ( req, res ) => {
-    res.sendFile('test.html', {root: __dirname});
-});
-app.get('/login',  function(req,res){
-    console.log('Login menu');
-    res.sendFile('login.html', {root: __dirname}, (err)=>{
-        if(err){
-            next(err)
-        } else {
-            console.log('File successfully sent');
-            
-        }
-    });
-});
-app.post('/login', (req,res)=>{
-    console.log('Post login');
-        
-        let token = signToken(config.user.username);
-        console.log(token);
-        
-        res.status(200).json({token});
-
-    
-})
-
-//MIDDLEWARE
-app.use(function(req,res,next){
-    console.log('Middleware', req.cookies);
-    if(req.cookies.cookieName == '1'){
-        console.log('Success');
-        next();
-
-    } else {
-        console.log('Failure');
-        res.redirect('/login');
-    }
-})
-
-//LOGIN REQUIRED PAGES
-app.get('/main', (req,res) => {
-    res.send('Main page');
-});
-app.get('/', (req,res) => {
-    res.send('Yes');
-});
-
-app.listen(config.port, function(){
-    console.log('Listening at: ', + config.port);
-
-    
-});
-//FUNCTIONS
-
-//Sign token
-function signToken(name){
-    let payload = {
-        username: name,
-        id: '1a2'
-    };
-    let token = jwt.sign(payload, config.secret, {expiresIn: '14 days'});
-    return token;
-}
-*/
+//=====================================================
+//=====================================================

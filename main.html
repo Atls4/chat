@@ -10,33 +10,70 @@
     <form action="">
         <button id="logout">Logout</button>
     </form>
-    <button id='send'>Click</button>
-    <script>
-        document.getElementById('logout').addEventListener('click', () => {
-            console.log('Delete ze cookies');
-            deleteCookies();
-            
-        });
-        function deleteCookies(){
-            let cookies = document.cookie.split(";");
+    <input id="chatField" type="text">
+    <button id='chatSend'>Click</button>
+    <ul id="messages"></ul>
 
-            cookies.forEach(cookie => {
-                let currentCookie = cookie;
-                let eqPos = currentCookie.indexOf("=");
-                let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    <!--JQUERY-->
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <!--PAGE SCRIPTS-->
+    <script>
+        $(()=>{
+            //LOGOUT BUTTON LISTENER
+            document.getElementById('logout').addEventListener('click', () => {
+                console.log('Delete cookies');
+                deleteCookies();
                 
             });
-        }
+            //DELETE COOKIES FUNCTION
+            function deleteCookies(){
+                let cookies = document.cookie.split(";");
+    
+                cookies.forEach(cookie => { //MAGIC
+                    let currentCookie = cookie;
+                    let eqPos = currentCookie.indexOf("=");
+                    let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    
+                });
+            }
+        });
     </script>
+    <!--CHAT SCRIPTS-->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
         $(()=>{
             const socket = io();
-            $('#send').on('click', ()=>{
-                socket.emit('click', 'I clicked');
+            //SEND BUTTON LISTENER
+            $('#chatSend').on('click', ()=>{
+
+                let text = $('#chatField').val();
+                let token = document.cookie.split(';');
+
+                for (let i = 0; i < token.length; i++) {
+                    token[i] = token[i].trim();
+                    
+                }
+
+                let sendToken = token.filter( c => c.startsWith('JWTtoken')).toString().replace("JWTtoken=","");                
+                let message = {
+                    text: text,
+                    token: sendToken,
+                    color: undefined || 'grey'
+                }
+                
+                socket.emit('send_message', message); //SEND MESSAGE
+                console.log('A message has been sent');
+                
                 return false;
+            });
+            //RECEIVE MESSAGE
+            socket.on('get_message', function(message){
+                console.log('A message has been received');
+                
+                //APPEND MESSAGE TO DOC
+                $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
+                    /*ADD COLOR AND BADGES IN FUTURE [REACT]*/
             });
         });
     </script>
