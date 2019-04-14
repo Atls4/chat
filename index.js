@@ -1,6 +1,8 @@
 /*:TODO: 
 Login email doesnt do anything
 Fix COMMANDS
+React stuff
+Update 3 - Login with email works, fixed bug where wrong id would not do anything
 */
 //DEPENDENCIES
 const express = require('express');
@@ -17,9 +19,11 @@ const chalk = require('chalk');
 
 const config = require('./config');
 const middleware = require('./middleware');
+const commands = require('./commands');
 
 const models = require('./models');
 let User = models.User;
+let BlackList = models.BlackList;
 
 //------------------------------------------------------------------
 class HandlerGenerator {
@@ -94,31 +98,49 @@ class HandlerGenerator {
 
     login (req, res) {
         let userInfo = {
-            username: req.body.username.toLowerCase(),
+            identification: req.body.id.toLowerCase(),
             password: req.body.password,
-            email: req.body.email.toLowerCase()
         };
         /*
         let username = req.body.username;
         let password = req.body.password;
         let email = req.body.email;
         */
-        validateLogin(User, userInfo, (data)=>{
-            if(data.success == true){
-            //Send cookie
-            res.cookie('JWTtoken', data.token, { maxAge: 900000});
-            console.log('Cookie');
-            res.redirect('/');
-
-            } else{
-                res.json({  
-                            success: false, 
-                            message: `Something went wrong: ${data.message}`, 
-                            error: data.err
-                        });
-                
-            }
-        });
+        if(userInfo.identification.includes('@')){
+            validateLogin(User, userInfo, 'email', (data)=>{
+                if(data.success == true){
+                    //Send cookie
+                    res.cookie('JWTtoken', data.token, { maxAge: 900000});
+                    console.log('Cookie');
+                    res.redirect('/');
+        
+                    } else{
+                        res.json({  
+                                    success: false, 
+                                    message: `Something went wrong: ${data.message}`, 
+                                    error: data.err
+                                });
+                        
+                    }
+            });
+        } else {
+            validateLogin(User, userInfo, 'username', (data)=>{
+                if(data.success == true){
+                //Send cookie
+                res.cookie('JWTtoken', data.token, { maxAge: 900000});
+                console.log('Cookie');
+                res.redirect('/');
+    
+                } else{
+                    res.json({  
+                                success: false, 
+                                message: `Something went wrong: ${data.message}`, 
+                                error: data.err
+                            });
+                    
+                }
+            });
+        }
 
     }
     index (req, res) {
@@ -132,41 +154,122 @@ class HandlerGenerator {
             }
         });
     }
-}
-//------------------------------------------------------------
-//Login function
-function validateLogin(model, data, callback){
-    let response = {
-
-    };
-    if(data.username && data.password){
-
-        model.findOne({username: data.username}, (err,doc) => {
+    styleCSS (req,res){
+        res.sendFile('style.css', {root: __dirname}, (err) => {
             if(err){
-                response.success = false;
-                response.message = "Username not found"
-                response.err = err;
-                callback(response);
+                console.log(err);
+                
             } else {
-                if(doc.username == data.username && doc.password === data.password){
-                    //SIGN TOKEn
-                    let token = jwt.sign({ username: data.username}, config.secret); //Modify in future
-                    
-                    response.success = true;
-                    response.message = "Token signed";
-                    response.err = false;
-                    response.token = token;
-                    callback(response);
-
-                } else {
-                    response.success = false;
-                    response.message = "Wrong password"
-                    response.err = err;
-                    callback(response);
-                }
+                console.log('StyleCSS file sucessfully sent');
+                
             }
         });
-    }else {
+    }
+    resetCSS (req,res){
+        res.sendFile('reset.css', {root: __dirname}, (err) => {
+            if(err){
+                console.log(err);
+                
+            } else {
+                console.log('ResetCSS file sucessfully sent');
+                
+            }
+        });
+    }
+}
+//======================================================================
+//=====================Login function===================================
+//======================================================================
+
+function validateLogin(model, data, mode, callback){
+    let response = {};
+    //ID AND PASSWORD EXISTS
+    if(data.identification && data.password){
+        //USERNAME 
+        if(mode === 'username'){
+            model.findOne({username: data.identification}, (err,doc) => {
+                //ERROR
+                if(err){
+                    console.log(err);
+                    
+                    response.success = false;
+                    response.message = "Something went wrong"
+                    response.err = err;
+                    callback(response);
+                } else {
+                    //USERNAME NOT FOUND
+                    if(doc === null ){
+
+                        response.success = false;
+                        response.message = "Username not found"
+                        response.err = err;
+                        callback(response);
+                    //USERNAME FOUND
+                    } else if(doc.username == data.identification && doc.password === data.password){
+                        //SIGN TOKEn
+                        let tokenData = {
+                            username: doc.username,
+                            role: doc.role
+                        }
+                        let token = jwt.sign(tokenData, config.secret); //Modify in future
+                        
+                        response.success = true;
+                        response.message = "Token signed";
+                        response.err = false;
+                        response.token = token;
+                        callback(response);
+    
+                    } else {
+                        response.success = false;
+                        response.message = "Wrong password"
+                        response.err = err;
+                        callback(response);
+                    }
+                }
+            });
+        //EMAIL
+        } else if(mode === 'email'){
+            model.findOne({email: data.identification}, (err,doc) => {
+                if(err){
+                    console.log(err);
+                    
+                    response.success = false;
+                    response.message = "Something went wrong"
+                    response.err = err;
+                    callback(response);
+                } else {
+                    if(doc === null ){
+
+                        response.success = false;
+                        response.message = "Email not found"
+                        response.err = err;
+                        callback(response);
+                    
+                    } else if(doc.email == data.identification && doc.password === data.password){
+                        //SIGN TOKEn
+                        let tokenData = {
+                            username: doc.username,
+                            role: doc.role
+                        }
+                        let token = jwt.sign(tokenData, config.secret); //Modify in future
+                        
+                        response.success = true;
+                        response.message = "Token signed";
+                        response.err = false;
+                        response.token = token;
+                        callback(response);
+    
+                    } else {
+                        response.success = false;
+                        response.message = "Wrong password"
+                        response.err = err;
+                        callback(response);
+                    }
+                }
+            });
+        }
+    //ID AND PASSWORD DOESNT EXISTS
+    } else {
         response.success = false;
         response.message = "Invalid username/password"
         response.err = true;
@@ -183,14 +286,15 @@ function chatApp(){
 
         //USER SENT SOMETHING
         socket.on('send_message', (message)=>{
-            console.log(chalk.blue(`Message received (${message.color})`));
+            console.log(chalk.blue(`\nMessage received (${message.color})`));
 
             let sendMessage = {
                 username: String,
                 text : String,
-                color: message.color || 'grey',
+                color: message.details.color || [170,100,230],
                 role: undefined,
-                type: 'standard'
+                type: 'standard',
+                details : {}
             };
 
             jwt.verify(message.token, config.secret, (err, decoded)=>{
@@ -211,25 +315,62 @@ function chatApp(){
                     
                     //VERIFY IF TEXT IS CORRECT
                     verifyText(message.text, ()=>{
-                        //CHECK IF TEXT IS COMMAND
+                        //===================================================================
+                        //==================CHECK IF TEXT IS COMMAND=========================
+                        //===================================================================
                         if(message.text.startsWith('/')){
+                            console.log(chalk.green(`Command received: [${message.text}]`));
+                            
+                            let commandData = {
+                                role: decoded.role,
+                                command: []
+                            };
+                            commandData.command = message.text.substr(1).split(" ");
+                            
+                            commands.starts(io,socket,commandData, (message)=>{
 
-                            console.log(chalk.yellow(`Command received: [${message.text}]`));
-                            let commandMessage = {
-                                username: 'System',
-                                text: String,
-                                color: 'grey',
-                                role: null,
-                                type: 'command'
-                            }
+                                console.log(chalk.yellow(message.type, message.text));
+                                if(message.success){
+                                    if(message.action === 'ban'){
+                                        //Add user to banlist
+                                        BlackList.findOne({username: message.details.username}, (err,result) => {
+                                            if(result == null){
+                                                
+                                                //Add user to banlist
+                                                let member = new BlackList({
+                                                    username: message.details.username,
+                                                });
+                                                member.save( (err)=>{
+                                                    if(err){
+                                                        console.log(err);
+                                                        
+                                                    } else {
+                                                        console.log('User banned');
+                                                        
+                                                    }
+                                                })
+                                            } else {
+                                                console.log(chalk.yellow(message.details.username, 'Already on blacklist'));
+                                                let errorMessage = {
+                                                    from: 'system',
+                                                    type: 'error',
+                                                    text: 'User already banned'
+                                                }
+                                                socket.emit('get_message', errorMessage);
+                                            }
+                                        });
+                                    }
+                                }
+                                
+                            });
 
-                            commandMessage.text = "Commands currently don't work"
-                            socket.emit('get_message', commandMessage);
-                            console.log(chalk.blue('Message sent to sender\n'));
                         } else {
 
                             sendMessage.username = decoded.username || 'Error_Username_Not_Found';
                             sendMessage.text = message.text;
+                            sendMessage.from = 'user';
+                            sendMessage.type = 'message';
+                            sendMessage.details.message = message.details.message;
                             //SEND MESSAGE TO EVERYONE
                             io.emit('get_message', sendMessage); //io.emit socket.emit
                             console.log(chalk.blue('Message sent to everyone\n'));
@@ -248,11 +389,17 @@ function chatApp(){
     });
 }
 //-----------------------------------------------------------------------
-function verifyRole(role,callback){
-    switch(role){
-        case 'user': 
+function doCommands(command, token){
+    switch(command){
+        case "ban": {
+
+        }
+        break;
+
+        default: null
         break;
     }
+    
 }
 //-----------------------------------------------------------------------
 function verifyText(text, callback){
@@ -265,6 +412,7 @@ function verifyText(text, callback){
                 
                 callback();
             } else {
+                
                 //FILTERED ERROR MSG COMES HERE
             }
         } else {
@@ -298,9 +446,11 @@ function main(){
 
     app.post('/login', handler.login );
     app.get('/', middleware.checkCookie, handler.index );
-    app.get('/login', handler.loginPage)
-    app.get('/register', handler.registerPage)
-    app.post('/register', handler.register)
+    app.get('/login', handler.loginPage);
+    app.get('/register', handler.registerPage);
+    app.post('/register', handler.register);
+    app.get('/style.css', handler.styleCSS)
+
 
 
     app.on('ready', () => { //Wait for mongoose to connect to db

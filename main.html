@@ -5,15 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Main page</title>
+    <base href="/">
+    <link href="reset.css" rel="stylesheet" type="text/css">
+
+    <!--Jquery/popper-->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <!--Bootstrap-->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/simplebar@latest/dist/simplebar.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplebar@latest/dist/simplebar.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <form action="">
-        <button id="logout">Logout</button>
-    </form>
-    <input id="chatField" type="text">
-    <button id='chatSend'>Click</button>
-    <ul id="messages"></ul>
-    <h4 id="placeholder">Placeholder</h3>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Chat</a>
+        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav navbar-right mr-auto">
+                <li class="nav-item active">
+                    <a id="logout" class="nav-link" href="#">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-10"></div>
+            <div class="col-2 sidebar" >
+                <div class="chat-messages " >
+                    <ul id="messages" ></ul>
+                    <div id="placeholder"></div>
+                </div>
+                <div class="chat-input">
+                    <textarea id="chatField" ></textarea>
+                    <button id='chatSend'>Click</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!--JQUERY-->
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
@@ -24,6 +60,7 @@
             document.getElementById('logout').addEventListener('click', () => {
                 console.log('Delete cookies');
                 deleteCookies();
+                window.location = '/';
                 
             });
             //DELETE COOKIES FUNCTION
@@ -45,10 +82,14 @@
     <script>
         $(()=>{
             const socket = io();
-            //SEND BUTTON LISTENER
+            const emotes = ['LUL', 'Kappa'];
+            //====================================================
+            //=============SEND BUTTON LISTENER===================
+            //====================================================
             $('#chatSend').on('click', ()=>{
 
-                let text = $('#chatField').val();
+                let textC = $('#chatField').val();
+                
                 let token = document.cookie.split(';');
 
                 for (let i = 0; i < token.length; i++) {
@@ -58,40 +99,172 @@
 
                 let sendToken = token.filter( c => c.startsWith('JWTtoken')).toString().replace("JWTtoken=","");                
                 let message = {
-                    text: text,
+                    text: textC,
                     token: sendToken,
-                    color: undefined || 'grey'
-                }
+                    details : {
+                        color: [255,88,88],
+                        message: processText(textC, emotes)
+                    }
+                };
                 
                 socket.emit('send_message', message); //SEND MESSAGE
                 console.log('A message has been sent');
                 
                 return false;
             });
-            //RECEIVE MESSAGE
+            function processText(text, emoteList){
+                let iteration = 0;
+                let messageArray = text.split(" ");
+                console.log(messageArray);
+                
+                let processedMessage = [];
+                messageArray.forEach( message => {
+                    //Check for emote
+                    
+                    for (let y = 0; y < emoteList.length; y++) {
+                        if(message === emoteList[y]){
+                            let objectItem = {
+                                type: 'emote',
+                                text: message
+                            }
+
+                            iteration++;
+                            processedMessage[iteration] = objectItem;
+                            iteration++;
+
+                            break;
+                        //Not emote
+                        } else if(y === emoteList.length-1){
+
+                            let objectItem = {
+                                type : 'message',
+                                text : message
+                            }
+                            if(processedMessage[iteration] == undefined){
+                                processedMessage[iteration] = objectItem;
+                                console.log('Created object');
+                                
+                            } else {
+                                processedMessage[iteration].text = processedMessage[iteration].text + " " +message;
+                                console.log('message' + processedMessage[iteration].text);
+                                
+                            }
+                        }
+                        
+                    }
+                    
+                });
+                return processedMessage;
+            }
+            //====================================================
+            //===================RECEIVE MESSAGE==================
+            //====================================================
             socket.on('get_message', function(message){
                 console.log('A message has been received');
-                switch(message.type){
-                    case "standard": {
-                        //APPEND MESSAGE TO DOC
-                        $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
-                        /*ADD COLOR AND BADGES IN FUTURE [REACT]*/
+                console.log(message);
+
+                //==============Message from chat server================================================
+                if(message.sender === 'chat_server' || message.sender == undefined){
+                    //======User message================
+                    if(message.from === 'user'){
+                        let chatText = message.details.message;
+                        console.log(chatText);
+                        
+                        let newChatText = "";
+                        for (let i = 0; i < chatText.length; i++) {
+                            if(chatText[i] != null){
+                                if(chatText[i].type === 'message'){
+                                    newChatText = newChatText + "<span data-type='message-fragment'>" + chatText[i].text + "</span> ";
+                                } else if (chatText[i].type === 'emote'){
+                                    newChatText = newChatText + "<div style='display: inline-block'><img src='https://cdn.betterttv.net/emote/566ca06065dbbdab32ec054e/1x'></div> "
+                                }
+                            }
+
+                        }
+                        newChatText.slice(0,1);
+                        console.info(newChatText);
+                        
+                        let $chatMessage = $(`
+                        <li>
+                            <span style="color: rgb(${message.color[0] ||170},${message.color[1] || 100},${message.color[2] ||237}) ">${message.username}</span>
+                            <span>: </span>    
+                            <span>${newChatText}</span>    
+                        </li>
+                        `);
+
+                        $('#messages').append($chatMessage); 
+
                     }
-                    break;
-                    case "command": {
-                        $('#placeholder').text('Command' + message.type + " : " + message.text); 
-                    }
-                    break;
-                    case "error": {
-                        $('#placeholder').text('Error' + message.type + " : " + message.text); 
-                    }
-                    break;
-                    default: {
-                        $('#messages').append($('<li>').text('' + message.username + " : " + message.text)); 
-                    }
-                    break;
-                }
+                    //======System message=============== 
+                    else if (message.from === 'system'){
+                        console.log('System');
+                        let alert = 'alert-warning';
+                        let $specialCommand = $(`
+                                                    <div class="alert ${alert} alert-dismissble fade show" role="alert">
+                                                    Command '${message.action}' : ${message.details.message}
+                                                    <button type="button" class="close" data-dismiss="alert" aria-label="close">
+                                                        <span aria-hidden="true">&times;</span>    
+                                                    </button>
+                                                    </div>
+                                                    `);                       
+                        //-------Command message---------------
+                        if(message.type === 'command'){
+                            if(message.success === true){
+                                
+                                console.log('Command');
+
+                                $('#placeholder').append($specialCommand);
+                                //$('#placeholder').text('Command' + message.type + " : " + message.text);
+                                switch(message.action){
+                                    case 'ban' : {
+                                        console.log($('#messages>li'));
+                                        
+                                        $('#messages>li').each((index,element)=>{
+                                            $(element).text('<message deleted>');
+                                        });
+                                    }
+                                    break;
+                                    case 'help': {
+                                        let $help = $(`
+                                        <li>   
+                                            <span>${message.message}</span>    
+                                        </li>
+                                        `);
+                                        //$('#messages').append($help);
+                                    }
+                                    break;
+                                    default: {
+                                        console.error('Unknown command: ', message.action);
+                                    }
+                                    break;
+                                }
+                            } else {
+                                alert = 'alert-danger';
+                                $('#placeholder').append($specialCommand); 
+
+                            }
+                        }
+                        //-------Error message---------------- 
+                        else if (false){
+                        
+                        }
+                        //------Undefined--------------------
+                        else {
+                            console.error('Undefined message type');
+                        };
+
+                    //========Undefined=================
+                    } else {
+                        console.error('Undefined origin');
+                    };
+
+                } else {
+                    console.error('Unknown sender');
+                    
+                };
+
             });
+
         });
     </script>
 </body>
