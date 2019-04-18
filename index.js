@@ -443,6 +443,7 @@ function main(){
     app.use(cookieParser());
     app.use(morgan('combined'));
 
+    app.use(express.static('public'))
 
     app.post('/login', handler.login );
     app.get('/', middleware.checkCookie, handler.index );
