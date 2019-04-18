@@ -1,0 +1,63 @@
+html,body {
+    height: 100%;
+    background-color: #3f3c46;
+}
+ul {
+    list-style: none;
+    padding: 0;
+}
+.container-fluid{
+    height: calc(100% - 56px);
+}
+.row {
+    height: 100%;
+}
+.sidebar {
+    height: 100%;
+    background-color: #212529;
+    color: #ffffff;
+    font-size: 12;
+    width: 300px;
+    padding: 20px 0 0 20px;
+
+}
+.chat-input {
+    
+    height: 130px;
+    width: 300px;
+    position: fixed;
+    bottom: 0;
+    padding: 0 20px 20px 0;
+    background-color: #212529;
+    color: #ffffff;
+    font-size: 12;
+
+}
+.chat-messages {
+    height: calc(100% - 131px);
+    overflow-y: hidden;
+}
+textarea {
+    min-height: 40px;
+    max-height: 160px;
+    width: 100%!important;
+}
+/* width */
+::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+  }
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #888; 
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+  }
